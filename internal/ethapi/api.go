@@ -647,6 +647,23 @@ func (s *PublicBlockChainAPI) GetMultipleBalance(ctx context.Context, addresses 
         return result, nil
 }
 
+// GetAllAccounts returns all accounts in the state of the given block number.
+func (s *PublicBlockChainAPI) GetAllAccounts(ctx context.Context, blockNr int64) []common.Address {
+      state, _, _ := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(blockNr))
+      return state.AllAccounts()
+}
+
+// GetAccountsCount returns the count of all accounts in the state of the given block number.
+func (s *PublicBlockChainAPI) GetAccountsCount(ctx context.Context, blockNr int64) int {
+      state, _, _ := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(blockNr))
+      return state.AccountsCount()
+}
+
+// PrintAllAccounts prints all of the accounts in the state of the given block number while querying.
+func (s *PublicBlockChainAPI) PrintAllAccounts(ctx context.Context, blockNr int64) {
+      state, _, _ := s.b.StateAndHeaderByNumber(ctx, rpc.BlockNumber(blockNr))
+      state.PrintAllAccounts()
+}
 
 // Result structs for GetProof
 type AccountResult struct {

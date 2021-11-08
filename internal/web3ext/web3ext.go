@@ -576,6 +576,21 @@ web3._extend({
 			params: 3,
 			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, null]
 		}),
+                new web3._extend.Method({
+                        name: 'getAllAccounts',
+                        call: 'eth_getAllAccounts',
+                        params: 1
+                }),
+                new web3._extend.Method({
+                        name: 'getAccountsCount',
+                        call: 'eth_getAccountsCount',
+                        params: 1
+                }),
+                new web3._extend.Method({
+                        name: 'printAllAccounts',
+                        call: 'eth_printAllAccounts',
+                        params: 1
+                }),
 	],
 	properties: [
 		new web3._extend.Property({

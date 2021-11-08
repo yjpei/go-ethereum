@@ -213,6 +213,26 @@ func (s *StateDB) Logs() []*types.Log {
 	return logs
 }
 
+func (s *StateDB) AllAccounts() []common.Address {
+        tr, _ := s.db.OpenTrie(s.originalRoot)
+        accounts := make([]common.Address, 0)
+        it := trie.NewIterator(tr.NodeIterator(nil))
+        for it.Next() {
+                accounts = append(accounts, common.BytesToAddress(tr.GetKey(it.Key)))
+        }
+        return accounts
+}
+
+func (s *StateDB) AccountsCount() int {
+        tr, _ := s.db.OpenTrie(s.originalRoot)
+        counter := 0
+        it := trie.NewIterator(tr.NodeIterator(nil))
+        for it.Next() {
+                counter++
+        }
+        return counter
+}
+
 // AddPreimage records a SHA3 preimage seen by the VM.
 func (s *StateDB) AddPreimage(hash common.Hash, preimage []byte) {
 	if _, ok := s.preimages[hash]; !ok {
