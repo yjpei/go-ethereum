@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func Test_Local(t *testing.T) {
+func Test_MultipleBalanceAt(t *testing.T) {
 	addresses := make([]common.Address, 0)
 	addresses = append(addresses, common.HexToAddress("0x1509027c6d99d1c63fd1940c592f93d09e3c9e45"))
 	addresses = append(addresses, common.HexToAddress("0x0483058142ece6b426350242710a389ed96d076d"))
