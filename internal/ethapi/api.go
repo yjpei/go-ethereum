@@ -632,6 +632,22 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	return (*hexutil.Big)(state.GetBalance(address)), state.Error()
 }
 
+// GetMultipleBalance returns the amount of wei for the given list of address in the state of the
+// given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
+// block numbers are also allowed.
+func (s *PublicBlockChainAPI) GetMultipleBalance(ctx context.Context, addresses []common.Address, blockNrOrHash rpc.BlockNumberOrHash) (map[common.Address]*hexutil.Big, error) {
+        result := make(map[common.Address]*hexutil.Big, 0)
+        state, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+        if state == nil || err != nil {
+                return nil, err
+        }
+        for _, address := range addresses {
+                result[address] = (*hexutil.Big)(state.GetBalance(address))
+        }
+        return result, nil
+}
+
+
 // Result structs for GetProof
 type AccountResult struct {
 	Address      common.Address  `json:"address"`

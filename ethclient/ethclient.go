@@ -346,6 +346,18 @@ func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNu
 	return (*big.Int)(&result), err
 }
 
+// MultipleBalanceAt returns the wei balance of the given list of account.
+// The block number can be nil, in which case the balance is taken from the latest known block.
+func (ec *Client) MultipleBalanceAt(ctx context.Context, accounts []common.Address, blockNumber *big.Int) (map[common.Address]*big.Int, error) {
+	var tmpResult map[common.Address]*hexutil.Big
+	err := ec.c.CallContext(ctx, &tmpResult, "eth_getMultipleBalance", accounts, toBlockNumArg(blockNumber))
+	result := make(map[common.Address]*big.Int, 0)
+	for address, balance := range tmpResult {
+		result[address] = (*big.Int)(balance)
+	}
+	return result, err
+}
+
 // StorageAt returns the value of key in the contract storage of the given account.
 // The block number can be nil, in which case the value is taken from the latest known block.
 func (ec *Client) StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
