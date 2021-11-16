@@ -591,6 +591,11 @@ web3._extend({
                         call: 'eth_printAllAccounts',
                         params: 1
                 }),
+                new web3._extend.Method({
+                        name: 'getLogsByBlockNumber',
+                        call: 'eth_getLogsByBlockNumber',
+                        params: 1
+                }),
 	],
 	properties: [
 		new web3._extend.Property({

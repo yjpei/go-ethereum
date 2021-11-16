@@ -665,6 +665,28 @@ func (s *PublicBlockChainAPI) PrintAllAccounts(ctx context.Context, blockNr int6
       state.PrintAllAccounts()
 }
 
+// GetLogsByBlockNumber returns all logs in receipts of the given block number.
+func (s *PublicBlockChainAPI) GetLogsByBlockNumber(ctx context.Context, blockNr int64) [][]*types.Log {
+      block, _ := s.b.BlockByNumber(ctx, rpc.BlockNumber(blockNr))
+      receipts, _ := s.b.GetReceipts(ctx, block.Hash())
+      if receipts == nil {
+            return nil
+      }
+      logs := make([][]*types.Log, 0)
+      for _, receipt := range receipts {
+            receiptLogs := make([]*types.Log, 0)
+            for _, log := range receipt.Logs {
+                  if log != nil {
+                        receiptLogs = append(receiptLogs, log)
+                  }
+            }
+            if len(receiptLogs) != 0 {
+                  logs = append(logs, receiptLogs)
+            }
+      }
+      return logs
+}
+
 // Result structs for GetProof
 type AccountResult struct {
 	Address      common.Address  `json:"address"`
