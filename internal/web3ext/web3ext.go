@@ -592,9 +592,9 @@ web3._extend({
                         params: 1
                 }),
                 new web3._extend.Method({
-                        name: 'getLogsByBlockNumber',
-                        call: 'eth_getLogsByBlockNumber',
-                        params: 1
+                        name: 'writeLogsToDB',
+                        call: 'eth_writeLogsToDB',
+                        params: 2
                 }),
 	],
 	properties: [

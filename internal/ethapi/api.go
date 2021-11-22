@@ -23,6 +23,8 @@ import (
 	"math/big"
 	"strings"
 	"time"
+	"database/sql"
+	"strconv"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -46,6 +48,9 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/tyler-smith/go-bip39"
+	//"github.com/jmoiron/sqlx"
+	_ "github.com/go-sql-driver/mysql"
+	//_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 // PublicEthereumAPI provides an API to access Ethereum related information.
@@ -665,26 +670,101 @@ func (s *PublicBlockChainAPI) PrintAllAccounts(ctx context.Context, blockNr int6
       state.PrintAllAccounts()
 }
 
-// GetLogsByBlockNumber returns all logs in receipts of the given block number.
-func (s *PublicBlockChainAPI) GetLogsByBlockNumber(ctx context.Context, blockNr int64) [][]*types.Log {
-      block, _ := s.b.BlockByNumber(ctx, rpc.BlockNumber(blockNr))
-      receipts, _ := s.b.GetReceipts(ctx, block.Hash())
-      if receipts == nil {
-            return nil
-      }
-      logs := make([][]*types.Log, 0)
-      for _, receipt := range receipts {
-            receiptLogs := make([]*types.Log, 0)
-            for _, log := range receipt.Logs {
-                  if log != nil {
-                        receiptLogs = append(receiptLogs, log)
-                  }
+// WriteLogsToDB write to DB all logs in the designated blocks.
+func (s *PublicBlockChainAPI) WriteLogsToDB(ctx context.Context, blockNrStart int64, blockNrEnd int64) {
+      dsn := "root:blockit@tcp(127.0.0.1:3306)/blockit"
+      db, _ := sql.Open("mysql", dsn)
+      defer db.Close()
+      tx, _ := db.Begin()
+
+      buf := strings.Builder{}
+      buf.WriteString("INSERT INTO ods_ethereum_logs(log_index, transaction_hash, transaction_index, address, data, topic0, topic1, topic2, topic3, block_timestamp, block_number, block_hash) VALUES")
+
+      startTime := time.Now().Unix()
+      count := 0
+      batchCount := 0
+      for i := blockNrStart; i <= blockNrEnd; i++ {
+            block, _ := s.b.BlockByNumber(ctx, rpc.BlockNumber(i))
+            receipts, _ := s.b.GetReceipts(ctx, block.Hash())
+            if receipts == nil {
+                  continue
             }
-            if len(receiptLogs) != 0 {
-                  logs = append(logs, receiptLogs)
+            for _, receipt := range receipts {
+                for _, receiptLog := range receipt.Logs {
+                      if receiptLog != nil {
+			    topic0, topic1, topic2, topic3 := "", "", "", ""
+			    if len(receiptLog.Topics) > 0 {
+				    topic0 = receiptLog.Topics[0].Hex()
+			    }
+			    if len(receiptLog.Topics) > 1 {
+				    topic1 = receiptLog.Topics[1].Hex()
+			    }
+			    if len(receiptLog.Topics) > 2 {
+				    topic2 = receiptLog.Topics[2].Hex()
+			    }
+			    if len(receiptLog.Topics) > 3 {
+				    topic3 = receiptLog.Topics[3].Hex()
+			    }
+			    data := hexutil.Encode(receiptLog.Data)
+			    if len(data) > 65533 {
+				    data = "overflow"
+			    }
+			    buf.WriteString(" (")
+			    buf.WriteString(strconv.Itoa((int)(receiptLog.Index)))
+			    buf.WriteString(", '")
+			    buf.WriteString(receiptLog.TxHash.Hex())
+			    buf.WriteString("', ")
+			    buf.WriteString(strconv.Itoa((int)(receiptLog.TxIndex)))
+			    buf.WriteString(", '")
+			    buf.WriteString(receiptLog.Address.String())
+			    buf.WriteString("', '")
+			    buf.WriteString(data)
+			    buf.WriteString("', '")
+			    buf.WriteString(topic0)
+			    buf.WriteString("', '")
+			    buf.WriteString(topic1)
+			    buf.WriteString("', '")
+			    buf.WriteString(topic2)
+			    buf.WriteString("', '")
+			    buf.WriteString(topic3)
+			    buf.WriteString("', str_to_date('")
+			    buf.WriteString(time.Unix((int64)(block.Time()),0).Format("2006-01-02 15:04:05"))
+			    buf.WriteString("', '%Y-%m-%d %H:%i:%s'), ")
+			    buf.WriteString(strconv.Itoa((int)(block.Number().Int64())))
+			    buf.WriteString(", '")
+			    buf.WriteString(receiptLog.BlockHash.Hex())
+			    buf.WriteString("'),")
+			    count++
+			    batchCount++
+			    if batchCount == 2000 {
+				    sqlStr := strings.TrimSuffix(buf.String(), ",")
+				    _, err := tx.Exec(sqlStr)
+				    if err != nil {
+					    log.Info(fmt.Sprintf(err.Error()))
+					    return
+				    }
+				    tx.Commit()
+				    tx, _ = db.Begin()
+				    batchCount = 0
+				    buf = strings.Builder{}
+				    buf.WriteString("INSERT INTO ods_ethereum_logs(log_index, transaction_hash, transaction_index, address, data, topic0, topic1, topic2, topic3, block_timestamp, block_number, block_hash) VALUES")
+				    log.Info(fmt.Sprintf("%d Logs written to DB", count))
+			    }
+                      }
+                }
             }
       }
-      return logs
+      if batchCount > 0 {
+	      sqlStr := strings.TrimSuffix(buf.String(), ",")
+	      tx.Exec(sqlStr)
+	      tx.Commit()
+	      log.Info(fmt.Sprintf("%d Logs written to DB", count))
+      }
+
+      endTime := time.Now().Unix()
+      seconds := endTime - startTime
+      log.Info(fmt.Sprintf("The time of getting logs from block %d to block %d is %d seconds", blockNrStart, blockNrEnd, seconds))
+      log.Info(fmt.Sprintf("count:%d", count))
 }
 
 // Result structs for GetProof
